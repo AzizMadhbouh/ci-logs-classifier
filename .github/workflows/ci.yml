@@ -1,0 +1,124 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+          pip install pytest pytest-cov
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Type check (mypy)
+        run: mypy feed_jenkins_builds.py ml/severity_llm.py ml/category_model.py
+
+      - name: Test (pytest)
+        run: pytest -q --cov=feed_jenkins_builds --cov=ml --cov-report=term-missing
+
+      - name: Dependency audit
+        run: pip-audit --desc
+
+  docker:
+    name: Docker Build
+    needs: lint-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ci-build-feed:test
+          load: true
+
+      - name: Smoke test
+        run: |
+          docker run --rm ci-build-feed:test python -c "
+          import feed_jenkins_builds, ml.severity_llm, ml.category_model
+          print('All modules import OK')
+          "
+
+  alembic:
+    name: Alembic Migrations
+    needs: lint-test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: builduser
+          POSTGRES_PASSWORD: buildpass
+          POSTGRES_DB: buildhistory
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U builduser"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install deps
+        run: pip install -e .[dev] alembic
+
+      - name: Run migrations
+        env:
+          DB_USER: builduser
+          DB_PASSWORD: buildpass
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: buildhistory
+        run: alembic upgrade head
+
+      - name: Test downgrade
+        run: alembic downgrade -1 && alembic upgrade head
+
+  secrets:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run trufflehog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: .
+          base: main
+          head: HEAD

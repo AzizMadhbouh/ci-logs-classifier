@@ -1,33 +1,46 @@
+# ---- docker-compose.yml ----
+version: "3.9"
+
 services:
+  # One-shot ingestion (run manually or via cron)
+  feed:
+    build: .
+    command: python feed_jenkins_builds.py --since 1
+    env_file: .env
+    depends_on:
+      - postgres
+    volumes:
+      - ./logs:/app/logs
+    profiles: ["ingest"]
+
+  # Continuous watcher (runs forever)
+  watcher:
+    build: .
+    command: python watch_builds.py --interval 30
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    profiles: ["watch"]
+
+  # Database (if not external)
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-builduser}
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-buildpass}
       POSTGRES_DB: ${POSTGRES_DB:-buildhistory}
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-
-  grafana:
-    image: grafana/grafana:latest
-    mem_limit: 768m
-    pids_limit: 256
     ports:
-      - "3001:3000"
-    environment:
-      GOMEMLIMIT: "384MiB"
-      GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: "${GF_ADMIN_PASSWORD:?set GF_ADMIN_PASSWORD in .env}"
-      DB_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
-      GF_AUTH_ANONYMOUS_ENABLED: "true"
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-builduser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:
-  grafana-data:

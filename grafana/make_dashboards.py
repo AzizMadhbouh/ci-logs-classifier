@@ -139,10 +139,11 @@ def main():
             ], {"h": 8, "w": 12, "x": 12, "y": 0}),
             barchar("Issues by Severity", "SELECT severity, count(*)::int AS n FROM build_issues GROUP BY severity ORDER BY n DESC", {"h": 9, "w": 12, "x": 0, "y": 0}),
             piechart("Severity Distribution", "SELECT severity, count(*)::int AS n FROM build_issues GROUP BY severity ORDER BY n DESC", {"h": 9, "w": 12, "x": 12, "y": 0}),
-            table("Latest Builds", "SELECT b.build_id, b.timestamp, COALESCE(b.result, '?') AS result, b.error_count, b.warning_count, COALESCE(w.worst, '-') AS worst_severity, COALESCE(b.llm_severity, '-') AS llm_severity, COALESCE(b.category, '-') AS category FROM builds b LEFT JOIN LATERAL (SELECT i.severity AS worst FROM build_issues i WHERE i.build_id = b.build_id ORDER BY CASE i.severity WHEN 'Critical' THEN 4 WHEN 'High' THEN 3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 1 ELSE 0 END DESC LIMIT 1) w ON true ORDER BY b.timestamp DESC LIMIT 100", {"h": 10, "w": 24, "x": 0, "y": 0}, overrides=[
+            table("Latest Builds", "SELECT b.build_id, b.timestamp, COALESCE(b.result, '?') AS result, b.error_count, b.warning_count, COALESCE(w.worst, '-') AS worst_severity, COALESCE(b.llm_severity, '-') AS llm_severity, COALESCE(b.category, '-') AS category, COALESCE(b.severity_reason, '-') AS reason FROM builds b LEFT JOIN LATERAL (SELECT i.severity AS worst FROM build_issues i WHERE i.build_id = b.build_id ORDER BY CASE i.severity WHEN 'Critical' THEN 4 WHEN 'High' THEN 3 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 1 ELSE 0 END DESC LIMIT 1) w ON true ORDER BY b.timestamp DESC LIMIT 100", {"h": 10, "w": 24, "x": 0, "y": 0}, overrides=[
                 {"matcher": {"id": "byName", "options": "worst_severity"}, "properties": [{"id": "mappings", "value": [SEV_MAPPINGS]}]},
                 {"matcher": {"id": "byName", "options": "llm_severity"}, "properties": [{"id": "mappings", "value": [SEV_MAPPINGS]}]},
                 {"matcher": {"id": "byName", "options": "result"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-text", "mode": "background"}}, {"id": "mappings", "value": [{"type": "value", "options": {"SUCCESS": {"color": "green", "index": 0}, "FAILURE": {"color": "red", "index": 1}}}]}]},
+                {"matcher": {"id": "byName", "options": "reason"}, "properties": [{"id": "custom.width", "value": 420}]},
             ]),
         ]),
     }
@@ -174,9 +175,10 @@ def main():
             timeseries("Category Trend", [
                 {"datasource": DS, "format": "time_series", "rawSql": CATEGORY_TREND_SQL, "refId": "A", "hide": False},
             ], {"h": 8, "w": 16, "x": 8, "y": 13}),
-            table("Latest Builds with Category", "SELECT b.build_id, b.timestamp, COALESCE(b.result, '?') AS result, COALESCE(b.category, '-') AS category, COALESCE(b.llm_severity, '-') AS llm_severity, b.error_count, b.warning_count FROM builds b ORDER BY b.timestamp DESC LIMIT 50", {"h": 10, "w": 24, "x": 0, "y": 21}, overrides=[
+            table("Latest Builds with Category", "SELECT b.build_id, b.timestamp, COALESCE(b.result, '?') AS result, COALESCE(b.category, '-') AS category, COALESCE(b.llm_severity, '-') AS llm_severity, COALESCE(b.severity_reason, '-') AS reason, b.error_count, b.warning_count FROM builds b ORDER BY b.timestamp DESC LIMIT 50", {"h": 10, "w": 24, "x": 0, "y": 21}, overrides=[
                 {"matcher": {"id": "byName", "options": "llm_severity"}, "properties": [{"id": "mappings", "value": [SEV_MAPPINGS]}]},
                 {"matcher": {"id": "byName", "options": "result"}, "properties": [{"id": "custom.cellOptions", "value": {"type": "color-text", "mode": "background"}}, {"id": "mappings", "value": [{"type": "value", "options": {"SUCCESS": {"color": "green", "index": 0}, "FAILURE": {"color": "red", "index": 1}}}]}]},
+                {"matcher": {"id": "byName", "options": "reason"}, "properties": [{"id": "custom.width", "value": 420}]},
             ]),
         ]),
     }

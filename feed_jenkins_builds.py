@@ -73,20 +73,31 @@ def list_builds():
 
 
 def fetch_build(n):
-    """Return (meta_text, log_text). Falls back to the console log."""
+    """Return (meta_text, log_text, artifact_files_dict)."""
     base = f"{JOB_BUILDS}/{n}"
     script = (
         f"cat {base}/build.xml; echo '=====LOG====='; "
-        f"cat {base}/archive/build-output.log 2>/dev/null || cat {base}/log 2>/dev/null"
+        f"cat {base}/archive/build-output.log 2>/dev/null || cat {base}/log 2>/dev/null; "
+        f"echo '=====ARTIFACTS====='; "
+        f"ls -1 {base}/archive/ 2>/dev/null || true"
     )
     rc, out = wsl_run("sh", "-c", script)
     if rc != 0:
-        return None, None
+        return None, None, {}
     text = out.decode("utf-8", errors="replace")
     if "=====LOG=====" not in text:
-        return text, ""
-    meta, _, log = text.partition("=====LOG=====")
-    return meta, log
+        return text, "", {}
+    meta, _, rest = text.partition("=====LOG=====")
+    log, _, artifacts_list = rest.partition("=====ARTIFACTS=====")
+    artifacts = {}
+    for fname in artifacts_list.strip().splitlines():
+        fname = fname.strip()
+        if fname:
+            artifact_script = f"cat {base}/archive/{fname} 2>/dev/null"
+            rc, out = wsl_run("sh", "-c", artifact_script)
+            if rc == 0:
+                artifacts[fname] = out.decode("utf-8", errors="replace")
+    return meta, log, artifacts
 
 
 def parse_meta(meta):
@@ -95,6 +106,23 @@ def parse_meta(meta):
     ts = datetime.fromtimestamp(int(m_ts.group(1)) / 1000, tz=timezone.utc) if m_ts else datetime.now(tz=timezone.utc)
     result = m_res.group(1) if m_res else None
     return ts, result
+
+
+FLAKE8_RE = re.compile(r"^([^:]+):\d+:\d+:\s+([A-Z]\d{3})\s+(.*)$")
+PYLINT_RE = re.compile(r"^([^:]+):\d+:\d+:\s+([A-Z]\d{4}):\s+(.*)\)\s*$")
+MYPY_RE = re.compile(r"^([^:]+):\d+:\s+(error|note|warning):\s+(.*)$")
+PYTEST_FAIL_RE = re.compile(r"^(tests?/[^\s:]+(?:::[^ ]+)+)\s+FAILED\s+\[")
+BLACK_RE = re.compile(r"^would reformat\s+(.+)$")
+BANDIT_ISSUE_RE = re.compile(r"^>> Issue:\s+\[([A-Z]\d+:\w+)\]\s*(.*)$")
+BANDIT_SEVERITY_RE = re.compile(r"^Severity:\s*(Low|Medium|High|Undefined)")
+BANDIT_LOCATION_RE = re.compile(r"^Location:\s*(.+)$")
+
+BANDIT_CONTINUATION = ("Severity:", "Confidence:", "CWE:", "More Info:", "Location:")
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+BANDIT_CONTINUATION = ("Severity:", "Confidence:", "CWE:", "More Info:", "Location:")
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def classify_line(line, pending_bandit):
@@ -155,46 +183,167 @@ def classify_line(line, pending_bandit):
     return None, pending_bandit
 
 
-def parse_log(log_text):
+def parse_sarif_flake8(sarif_text):
+    """Parse flake8 SARIF output into issue dicts."""
     issues = []
-    pending = None
+    try:
+        data = json.loads(sarif_text)
+        for run in data.get("runs", []):
+            tool = run.get("tool", {}).get("driver", {})
+            rules = {r.get("id"): r for r in tool.get("rules", [])}
+            for result in run.get("results", []):
+                rule_id = result.get("ruleId", "")
+                level = result.get("level", "warning")
+                msg = result.get("message", {}).get("text", "")
+                locations = result.get("locations", [])
+                loc_str = ""
+                if locations:
+                    phys = locations[0].get("physicalLocation", {})
+                    region = phys.get("region", {})
+                    start_line = region.get("startLine", "?")
+                    artifact = phys.get("artifactLocation", {}).get("uri", "")
+                    loc_str = f"{artifact}:{start_line}"
+                sev = "High" if level == "error" else "Medium"
+                is_err = level == "error"
+                line = f"{loc_str}: {rule_id} {msg}" if loc_str else f"{rule_id} {msg}"
+                issues.append({"severity": sev, "category": "flake8", "line": line, "is_error": is_err})
+    except Exception:
+        pass
+    return issues
+
+
+def parse_sarif_bandit(sarif_text):
+    """Parse bandit SARIF output into issue dicts."""
+    issues = []
+    try:
+        data = json.loads(sarif_text)
+        for run in data.get("runs", []):
+            for result in run.get("results", []):
+                level = result.get("level", "warning")
+                msg = result.get("message", {}).get("text", "")
+                rule_id = result.get("ruleId", "")
+                locations = result.get("locations", [])
+                loc_str = ""
+                if locations:
+                    phys = locations[0].get("physicalLocation", {})
+                    region = phys.get("region", {})
+                    start_line = region.get("startLine", "?")
+                    artifact = phys.get("artifactLocation", {}).get("uri", "")
+                    loc_str = f"{artifact}:{start_line}"
+                sev = "High" if level == "error" else "Medium"
+                is_err = level == "error"
+                line = f"{loc_str}: {rule_id} {msg}" if loc_str else f"{rule_id} {msg}"
+                issues.append({"severity": sev, "category": "bandit", "line": line, "is_error": is_err})
+    except Exception:
+        pass
+    return issues
+
+
+def parse_pylint_json(json_text):
+    """Parse pylint JSON output into issue dicts."""
+    issues = []
+    try:
+        data = json.loads(json_text)
+        for item in data:
+            msg_id = item.get("message-id", "")
+            msg = item.get("message", "")
+            path = item.get("path", "")
+            line_no = item.get("line", "?")
+            col = item.get("column", "?")
+            typ = item.get("type", "warning")
+            sev_map = {"error": "High", "fatal": "Critical", "warning": "Medium", "refactor": "Low", "convention": "Low", "info": "Low"}
+            sev = sev_map.get(typ, "Medium")
+            is_err = typ in ("error", "fatal")
+            line = f"{path}:{line_no}:{col}: {msg_id} {msg}"
+            issues.append({"severity": sev, "category": "pylint", "line": line, "is_error": is_err})
+    except Exception:
+        pass
+    return issues
+
+
+def parse_junit_xml(xml_text):
+    """Parse JUnit XML (pytest) into issue dicts."""
+    issues = []
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(xml_text)
+        for testsuite in root.iter("testsuite"):
+            for testcase in testsuite.iter("testcase"):
+                failure = testcase.find("failure")
+                error = testcase.find("error")
+                if failure is not None or error is not None:
+                    name = testcase.get("name", "")
+                    classname = testcase.get("classname", "")
+                    msg = (failure.text if failure is not None else error.text) or ""
+                    line = f"{classname}.{name} {msg}"
+                    issues.append({"severity": "High", "category": "test", "line": line, "is_error": True})
+    except Exception:
+        pass
+    return issues
+
+
+def parse_black_log(log_text):
+    """Parse black 'would reformat' lines from log (no structured output)."""
+    issues = []
     for raw in log_text.splitlines():
         line = ANSI_RE.sub("", raw).rstrip()
-        if not line.strip():
-            pending = None
-            continue
-        issue, pending = classify_line(line, pending)
-        if issue:
-            issues.append(issue)
-            pending = None
+        if line.startswith("would reformat"):
+            m = BLACK_RE.match(line)
+            if m:
+                issues.append({"severity": "Medium", "category": "black", "line": m.group(1), "is_error": False})
+    return issues
 
-    errors = [i for i in issues if i["is_error"]]
-    warnings = [i for i in issues if not i["is_error"]]
-    return {"error_count": len(errors), "warning_count": len(warnings), "errors": errors, "warnings": warnings}
+
+def parse_artifacts(artifacts, log_text):
+    """Parse all artifact files and return combined issues."""
+    all_issues = []
+    has_structured = False
+    # flake8 SARIF
+    if "flake8.sarif" in artifacts:
+        all_issues.extend(parse_sarif_flake8(artifacts["flake8.sarif"]))
+        has_structured = True
+    # bandit SARIF
+    if "bandit.sarif" in artifacts:
+        all_issues.extend(parse_sarif_bandit(artifacts["bandit.sarif"]))
+        has_structured = True
+    # pylint JSON
+    if "pylint.json" in artifacts:
+        all_issues.extend(parse_pylint_json(artifacts["pylint.json"]))
+        has_structured = True
+    # JUnit XML (pytest)
+    if "report.xml" in artifacts:
+        all_issues.extend(parse_junit_xml(artifacts["report.xml"]))
+        has_structured = True
+    # black (from log only - no structured output yet)
+    all_issues.extend(parse_black_log(log_text))
+    # mypy (from log only - no structured output yet)
+    for raw in log_text.splitlines():
+        line = ANSI_RE.sub("", raw).rstrip()
+        m = MYPY_RE.match(line)
+        if m:
+            kind = m.group(2)
+            sev, err = ("High", True) if kind == "error" else ("Low", False)
+            all_issues.append({"severity": sev, "category": "mypy", "line": line.strip(), "is_error": err})
+    return all_issues
 
 
 def ingest_build(cur, n, require_complete=True, llm=True):
     """Fetch one build from Jenkins and upsert it into Postgres. Returns True if data was written."""
-    meta, log = fetch_build(n)
+    meta, log, artifacts = fetch_build(n)
     if meta is None or not log.strip():
         return False
     ts, result = parse_meta(meta)
     if require_complete and (result is None or "<completed>true" not in meta):
         return False
-    parsed = parse_log(log)
-    is_clean = (
-        result == "SUCCESS"
-        and parsed["error_count"] == 0
-        and parsed["warning_count"] == 0
-    )
-    _, evidence = extract_evidence_lines(log)
-    if not evidence:
-        evidence = "\n".join(
-            i["line"] for i in parsed["errors"] + parsed["warnings"]
-        )
+    issues = parse_artifacts(artifacts, log)
+    errors = [i for i in issues if i["is_error"]]
+    warnings = [i for i in issues if not i["is_error"]]
+    is_clean = result == "SUCCESS" and len(errors) == 0
+    # Use issue lines as evidence
+    evidence = "\n".join(i["line"] for i in issues) if issues else log[-10000:]
     if is_clean:
         category = "clean"
-    elif evidence:
+    elif issues:
         category, _, _ = predict_category(evidence)
     else:
         category, _, _ = predict_category(log[-10000:])
@@ -205,19 +354,19 @@ def ingest_build(cur, n, require_complete=True, llm=True):
         "ON CONFLICT (build_id) DO UPDATE SET "
         "timestamp = EXCLUDED.timestamp, error_count = EXCLUDED.error_count, "
         "warning_count = EXCLUDED.warning_count, result = EXCLUDED.result",
-        (n, ts, parsed["error_count"], parsed["warning_count"], "", result),
+        (n, ts, len(errors), len(warnings), "", result),
     )
     cur.execute(
         "UPDATE builds SET category = %s WHERE build_id = %s",
         (category, n),
     )
-    for e in parsed["errors"]:
+    for e in errors:
         cur.execute(
             "INSERT INTO build_issues (build_id, timestamp, severity, category, line, is_error) "
             "VALUES (%s, %s, %s, %s, %s, %s)",
             (n, ts, e["severity"], e["category"], e["line"], True),
         )
-    for w in parsed["warnings"]:
+    for w in warnings:
         cur.execute(
             "INSERT INTO build_issues (build_id, timestamp, severity, category, line, is_error) "
             "VALUES (%s, %s, %s, %s, %s, %s)",
@@ -227,7 +376,7 @@ def ingest_build(cur, n, require_complete=True, llm=True):
         cur.execute("SELECT llm_severity FROM builds WHERE build_id = %s", (n,))
         if cur.fetchone()[0] is None:
             if is_clean:
-                sev, source, reason = "Low", "policy", "Clean build: 0 errors, 0 warnings, all tests pass"
+                sev, source, reason = "Low", "policy", "Clean build: 0 errors, all tests pass"
             else:
                 sev, source, reason = classify_severity(
                     category, evidence, fallback_policy=False

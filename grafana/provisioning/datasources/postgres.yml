@@ -1,17 +1,20 @@
+# grafana/provisioning/datasources/postgres.yml
 apiVersion: 1
 
 datasources:
-  - name: BuildHistory
-    uid: buildhistory
+  - name: Build History Postgres
     type: postgres
     access: proxy
-    url: postgres:5432
-    user: builduser
+    url: ${DB_HOST}:${DB_PORT}
+    database: ${DB_NAME}
+    user: ${DB_USER}
     secureJsonData:
       password: ${DB_PASSWORD}
     jsonData:
-      database: buildhistory
       sslmode: disable
-      postgresVersion: 1600
-      timescaledb: false
+      maxOpenConns: 100
+      maxIdleConns: 10
+      maxIdleConnsAuto: true
+      connMaxLifetime: 14400
+    isDefault: true
     editable: false
