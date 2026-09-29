@@ -1,6 +1,6 @@
 """Sales data analysis functions."""
+
 from collections import defaultdict
-import time  # INTENTIONAL BUG: unused import -> flake8 F401
 
 
 def calculate_total_sales(data: list[dict]) -> float:
@@ -17,7 +17,7 @@ def calculate_average_order_value(data: list[dict]) -> float:
         return 0.0
 
     total = calculate_total_sales(data)
-    return round(total / len(data), 2) + None  # INTENTIONAL BUG: breaks mypy + runtime
+    return round(total / len(data), 2)
 
 
 def get_top_products(data: list[dict], n: int = 3) -> list[tuple[str, float]]:

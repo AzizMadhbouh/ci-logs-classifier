@@ -1,4 +1,5 @@
 """Data loading and validation for sales data."""
+
 import csv
 from pathlib import Path
 

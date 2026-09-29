@@ -1,4 +1,5 @@
 """Report generation for sales data."""
+
 import csv
 from .analyzer import (
     calculate_average_order_value,
