@@ -10,3 +10,7 @@ psycopg2-binary>=2.9
 alembic>=1.12
 python-json-logger>=2.0
 ruff>=0.1
+torch>=2.0 --index-url https://download.pytorch.org/whl/cpu
+transformers>=4.30
+safetensors>=0.4
+tokenizers>=0.13
