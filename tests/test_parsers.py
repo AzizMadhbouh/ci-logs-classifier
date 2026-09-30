@@ -7,9 +7,7 @@ from feed_jenkins_builds import (
     parse_pylint_json,
     parse_junit_xml,
     parse_black_log,
-    parse_artifacts,
     classify_line,
-    ERROR_LEVELS,
 )
 
 # ---------- flake8 SARIF ----------
@@ -182,7 +180,11 @@ def test_parse_black_log():
         ("src/foo.py:1:1: W293 blank line contains whitespace", "flake8", False),
         ("src/foo.py:10:5: E1101: Module has no member 'foo'", "pylint", True),
         ("src/foo.py:5: note: unused variable 'x'", "mypy", False),
-        ("tests/test_foo.py::test_bar FAILED [ 50%]", "test", True),
+        (
+            "tests/test_foo.py::test_bar FAILED [ 50%]",
+            "test",
+            True,
+        ),
         ("would reformat src/foo.py", "black", False),
     ],
 )

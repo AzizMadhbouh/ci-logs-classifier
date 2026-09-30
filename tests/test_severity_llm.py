@@ -1,17 +1,14 @@
 # tests/test_severity_llm.py
 import json
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from ml.severity_llm import (
     classify_severity,
-    _call_gemini,
     _parse_severity,
     _retry_delay,
     _gemini_body,
-    _SYSTEM_PROMPT,
     _try_llm,
 )
-from urllib.error import HTTPError
 
 
 # ---------- _parse_severity ----------
@@ -47,7 +44,7 @@ def test_retry_delay_parses_retry_info():
                     "error": {
                         "details": [
                             {
-                                "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                                "@type": ("type.googleapis.com/google.rpc.RetryInfo"),
                                 "retryDelay": "42s",
                             }
                         ]
@@ -94,7 +91,8 @@ def test_classify_severity_fallback_policy():
         assert src == "policy"
         assert sev in ("Low", "Medium", "High", "Critical")
 
-    # When fallback_policy=False and LLM fails, behavior depends on implementation
+    # When fallback_policy=False and LLM fails, behavior depends on
+    # implementation
     sev, src, reason = classify_severity(
         "test_failure", "FAILED test", fallback_policy=False
     )
