@@ -141,5 +141,6 @@ jobs:
       - name: Run trufflehog
         uses: trufflesecurity/trufflehog@main
         with:
-          # Fail (exit 183) only on credentials confirmed live.
-          extra_args: --results=verified --fail
+          # The action already passes --fail; only credentials confirmed
+          # live are reported here (no unknown/unverified noise).
+          extra_args: --results=verified
