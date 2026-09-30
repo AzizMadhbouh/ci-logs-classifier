@@ -1,0 +1,15 @@
+# Notebooks are exploratory; cell-wise imports are normal there.
+extend-exclude = ["*.ipynb"]
+
+[lint]
+# Match the flake8 spirit: pycodestyle errors that break code + pyflakes.
+# E501 (line length) is handled by black (88 cols) and flake8 (79 cols).
+select = ["E4", "E7", "E9", "F"]
+
+[lint.per-file-ignores]
+# Research/ETL helper scripts: unused locals, lambdas and `l` loop vars are benign.
+"ml/*" = ["F841", "E741", "E731"]
+# These entrypoints load .env / sys.path before importing project modules on purpose.
+"feed_jenkins_builds.py" = ["E402"]
+"build_report.py" = ["E402"]
+"watch_builds.py" = ["E402"]

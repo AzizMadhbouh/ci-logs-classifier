@@ -53,7 +53,7 @@ LOGGING_CONFIG = {
     },
     "loggers": {
         "feed_jenkins_builds": {"level": "INFO", "propagate": True},
-        "ml.severity_llm": {"level": "INFO", "propagate: True"},
+        "ml.severity_llm": {"level": "INFO", "propagate": True},
         "watch_builds": {"level": "INFO", "propagate": True},
     },
 }

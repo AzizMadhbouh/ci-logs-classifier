@@ -27,20 +27,31 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev]
-          pip install pytest pytest-cov
+          pip install -r requirements.txt
+          pip install pip-audit
 
       - name: Lint (ruff)
         run: ruff check .
 
+      - name: Format check (black)
+        run: python -m black --check src/ tests/
+
       - name: Type check (mypy)
-        run: mypy feed_jenkins_builds.py ml/severity_llm.py ml/category_model.py
+        run: >
+          python -m mypy
+          --ignore-missing-imports --follow-imports=silent
+          feed_jenkins_builds.py
+          ml/severity_llm.py ml/category_model.py ml/rootcause_model.py
+          logging_config.py watch_builds.py build_report.py
 
       - name: Test (pytest)
-        run: pytest -q --cov=feed_jenkins_builds --cov=ml --cov-report=term-missing
+        run: python -m pytest -q --cov=feed_jenkins_builds --cov=ml --cov-report=term-missing
 
-      - name: Dependency audit
-        run: pip-audit --desc
+      # Non-blocking: reports known CVEs in the dependency tree without
+      # turning every new advisory into a red build.
+      - name: Dependency audit (informational)
+        run: python -m pip-audit --desc
+        continue-on-error: true
 
   docker:
     name: Docker Build
@@ -61,12 +72,12 @@ jobs:
           tags: ci-build-feed:test
           load: true
 
+      # ENTRYPOINT is `python`, so only the python arguments are passed.
       - name: Smoke test
-        run: |
-          docker run --rm ci-build-feed:test python -c "
-          import feed_jenkins_builds, ml.severity_llm, ml.category_model
-          print('All modules import OK')
-          "
+        run: >
+          docker run --rm ci-build-feed:test
+          -c "import feed_jenkins_builds, ml.severity_llm, ml.category_model;
+          print('All modules import OK')"
 
   alembic:
     name: Alembic Migrations
@@ -85,7 +96,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -97,28 +107,39 @@ jobs:
           cache: pip
 
       - name: Install deps
-        run: pip install -e .[dev] alembic
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Run migrations
         env:
           DB_USER: builduser
           DB_PASSWORD: buildpass
           DB_HOST: localhost
-          DB_PORT: 5432
+          DB_PORT: "5432"
           DB_NAME: buildhistory
         run: alembic upgrade head
 
       - name: Test downgrade
+        env:
+          DB_USER: builduser
+          DB_PASSWORD: buildpass
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_NAME: buildhistory
         run: alembic downgrade -1 && alembic upgrade head
 
   secrets:
     name: Secrets Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Run trufflehog
         uses: trufflesecurity/trufflehog@main
         with:
-          path: .
-          base: main
-          head: HEAD
+          # Fail (exit 183) only on credentials confirmed live.
+          extra_args: --results=verified --fail

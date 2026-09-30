@@ -7,8 +7,6 @@ whole build job log; output is the job's root-cause label + calibrated confidenc
 Also exports `window_text`, the head+tail windowing used at train AND predict time
 (kept in sync with ml/rootcause_training.ipynb).
 """
-import json
-import os
 import re
 
 import torch

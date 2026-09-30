@@ -1,0 +1,26 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.coverage
+.env
+
+# Large artifacts not needed inside the image
+model.safetensors
+*.pkl
+*.jpg
+*.pdf
+data/
+cicd-selfhealing-dataset/
+log-anomaly-datasets/
+pipeline-dataset/
+build_history/
+grafana/
+build_*_report.txt
+jenkins_output_*.txt
+prediction_*.txt
+prediction_debug_*.txt
+test_log.txt

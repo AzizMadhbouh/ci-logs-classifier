@@ -11,6 +11,7 @@ Usage:
     python feed_jenkins_builds.py --clear             # delete rows first
 """
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -29,7 +30,6 @@ if _env_path.exists():
 
 from analyze_history import ensure_schema, get_db_conn
 from ml.severity_llm import classify_severity
-from ml.rootcause_model import extract_evidence_lines
 from ml.category_model import predict_category
 
 WSL_DISTRO = "Ubuntu"
@@ -189,8 +189,6 @@ def parse_sarif_flake8(sarif_text):
     try:
         data = json.loads(sarif_text)
         for run in data.get("runs", []):
-            tool = run.get("tool", {}).get("driver", {})
-            rules = {r.get("id"): r for r in tool.get("rules", [])}
             for result in run.get("results", []):
                 rule_id = result.get("ruleId", "")
                 level = result.get("level", "warning")
@@ -297,23 +295,18 @@ def parse_black_log(log_text):
 def parse_artifacts(artifacts, log_text):
     """Parse all artifact files and return combined issues."""
     all_issues = []
-    has_structured = False
     # flake8 SARIF
     if "flake8.sarif" in artifacts:
         all_issues.extend(parse_sarif_flake8(artifacts["flake8.sarif"]))
-        has_structured = True
     # bandit SARIF
     if "bandit.sarif" in artifacts:
         all_issues.extend(parse_sarif_bandit(artifacts["bandit.sarif"]))
-        has_structured = True
     # pylint JSON
     if "pylint.json" in artifacts:
         all_issues.extend(parse_pylint_json(artifacts["pylint.json"]))
-        has_structured = True
     # JUnit XML (pytest)
     if "report.xml" in artifacts:
         all_issues.extend(parse_junit_xml(artifacts["report.xml"]))
-        has_structured = True
     # black (from log only - no structured output yet)
     all_issues.extend(parse_black_log(log_text))
     # mypy (from log only - no structured output yet)

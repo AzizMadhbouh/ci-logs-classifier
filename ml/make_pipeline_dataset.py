@@ -350,7 +350,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
 
     if not os.path.exists(LOGCHUNKS_ZIP):
-        print(f"Downloading LogChunks from Zenodo ...")
+        print("Downloading LogChunks from Zenodo ...")
         urllib.request.urlretrieve(LOGCHUNKS_URL, LOGCHUNKS_ZIP)
     chunks = load_logchunks(LOGCHUNKS_ZIP)
     print(f"LogChunks: {len(chunks)} failure chunks")

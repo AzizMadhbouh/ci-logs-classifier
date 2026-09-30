@@ -16,10 +16,8 @@ Output: pipeline-dataset/rootcause_dataset.csv
   splits are stratified by category (seed fd by SEED).
 """
 import argparse
-import collections
 import os
 import random
-import sys
 import urllib.request
 import zipfile
 

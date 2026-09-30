@@ -5,11 +5,9 @@ auth_permission_error, ci_config_git, containers_docker, database_error,
 network_api_error, out_of_memory, runtime_error, syntax_error,
 test_failure, timeout_error
 """
-import os
 import torch
 from safetensors.torch import load_file
-from transformers import AutoConfig, AutoModelForSequenceClassification
-from tokenizers import Tokenizer
+from transformers import AutoConfig
 
 PROJECT_ROOT = r"C:\Users\azizm\Documents\Default Project\sales-analyzer"
 

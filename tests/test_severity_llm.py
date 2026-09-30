@@ -7,7 +7,6 @@ from ml.severity_llm import (
     _parse_severity,
     _retry_delay,
     _gemini_body,
-    _try_llm,
 )
 
 
@@ -15,9 +14,15 @@ from ml.severity_llm import (
 @pytest.mark.parametrize(
     "text,expected",
     [
-        ('{"severity": "High", "reason": "test failed"}', ("High", "test failed")),
+        (
+            '{"severity": "High", "reason": "test failed"}',
+            ("High", "test failed"),
+        ),
         ('{"severity": "low", "reason": "lint"}', ("Low", "lint")),
-        ('junk {"severity": "Critical", "reason": "boom"} junk', ("Critical", "boom")),
+        (
+            'junk {"severity": "Critical", "reason": "boom"} junk',
+            ("Critical", "boom"),
+        ),
         ("no json here", (None, None)),
         ('{"severity": "Unknown"}', (None, None)),
     ],
@@ -37,29 +42,31 @@ def test_gemini_body():
 
 # ---------- _retry_delay ----------
 def test_retry_delay_parses_retry_info():
+    payload = {
+        "error": {
+            "details": [
+                {
+                    "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                    "retryDelay": "42s",
+                }
+            ]
+        }
+    }
+
     class MockError:
         def read(self):
-            return json.dumps(
-                {
-                    "error": {
-                        "details": [
-                            {
-                                "@type": ("type.googleapis.com/google.rpc.RetryInfo"),
-                                "retryDelay": "42s",
-                            }
-                        ]
-                    }
-                }
-            ).encode()
+            return json.dumps(payload).encode()
 
     e = MockError()
     assert _retry_delay(e, 0) == 42
 
 
 def test_retry_delay_parses_message():
+    payload = {"error": {"message": "Please retry in 30s"}}
+
     class MockError:
         def read(self):
-            return json.dumps({"error": {"message": "Please retry in 30s"}}).encode()
+            return json.dumps(payload).encode()
 
     e = MockError()
     assert _retry_delay(e, 0) == 30

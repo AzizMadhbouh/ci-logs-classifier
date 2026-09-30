@@ -1,9 +1,7 @@
 import json
 import os
-import re
 import sys
 
-import torch
 
 from ml.rootcause_model import DEFAULT_REPO, extract_evidence_lines, load, predict_log
 from ml.severity_llm import classify_severity

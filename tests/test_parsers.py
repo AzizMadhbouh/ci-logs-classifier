@@ -11,20 +11,15 @@ from feed_jenkins_builds import (
 )
 
 # ---------- flake8 SARIF ----------
+FLAKE8_RULES = [
+    {"id": "E302", "shortDescription": "expected 2 blank lines"},
+    {"id": "W293", "shortDescription": "blank line contains whitespace"},
+]
+
 FLAKE8_SARIF = {
     "runs": [
         {
-            "tool": {
-                "driver": {
-                    "rules": [
-                        {"id": "E302", "shortDescription": "expected 2 blank lines"},
-                        {
-                            "id": "W293",
-                            "shortDescription": "blank line contains whitespace",
-                        },
-                    ]
-                }
-            },
+            "tool": {"driver": {"rules": FLAKE8_RULES}},
             "results": [
                 {
                     "ruleId": "E302",
@@ -169,7 +164,8 @@ BLACK_LOG = "would reformat src/foo.py\nwould reformat src/bar.py\n"
 def test_parse_black_log():
     issues = parse_black_log(BLACK_LOG)
     assert len(issues) == 2
-    assert all(i["category"] == "black" and i["severity"] == "Medium" for i in issues)
+    assert all(i["category"] == "black" for i in issues)
+    assert all(i["severity"] == "Medium" for i in issues)
 
 
 # ---------- classify_line ----------
@@ -177,7 +173,11 @@ def test_parse_black_log():
     "line,expected_cat,expected_err",
     [
         ("src/foo.py:1:1: E302 expected 2 blank lines", "flake8", True),
-        ("src/foo.py:1:1: W293 blank line contains whitespace", "flake8", False),
+        (
+            "src/foo.py:1:1: W293 blank line contains whitespace",
+            "flake8",
+            False,
+        ),
         ("src/foo.py:10:5: E1101: Module has no member 'foo'", "pylint", True),
         ("src/foo.py:5: note: unused variable 'x'", "mypy", False),
         (

@@ -4,7 +4,7 @@ import re
 import psycopg2
 from datetime import datetime
 from pathlib import Path
-from collections import Counter, defaultdict
+from collections import defaultdict
 
 
 DATA_DIR = Path("build_history")

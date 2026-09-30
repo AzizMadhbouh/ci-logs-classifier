@@ -65,13 +65,14 @@ def build_report(build_number: int, output_path: Path) -> None:
     lines.append(f"Category    : {cat}")
     lines.append(f"LLM Severity: {sev}  (source: {src})")
     lines.append(f"Reason      : {reason}")
-    lines.append(f"")
+    lines.append("")
     lines.append(f"Error count : {len(errors)}")
     lines.append(f"Warning count: {len(warnings)}")
-    lines.append(f"")
+    lines.append("")
 
     # Helper to truncate long log lines
-    trunc = lambda s: (s[:120] + "…") if len(s) > 120 else s
+    def trunc(s: str) -> str:
+        return (s[:120] + "…") if len(s) > 120 else s
 
     lines.append("--- Errors (is_error=TRUE) ---")
     for sev_i, cat_i, line, is_err in errors:

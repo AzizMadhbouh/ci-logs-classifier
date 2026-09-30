@@ -34,6 +34,7 @@ prediction_output_*.txt
 prediction_debug_*.txt
 sample_report*.txt
 test_log.txt
+build_*_report.txt
 
 # Personal files
 810622863_*.jpg
