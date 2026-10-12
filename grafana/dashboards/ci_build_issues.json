@@ -15,7 +15,7 @@
     "list": []
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-90d",
     "to": "now"
   },
   "timezone": "browser",
@@ -28,8 +28,9 @@
       "type": "piechart",
       "title": "Issue Severity",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 9,
@@ -81,8 +82,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -97,8 +99,9 @@
       "type": "piechart",
       "title": "Issue Category",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 9,
@@ -150,8 +153,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -166,8 +170,9 @@
       "type": "barchart",
       "title": "Errors vs Warnings",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 9,
@@ -216,8 +221,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -232,8 +238,9 @@
       "type": "table",
       "title": "Issue Detail",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 12,
@@ -346,8 +353,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -362,8 +370,9 @@
       "type": "piechart",
       "title": "Category Distribution",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 9,
@@ -415,8 +424,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -431,8 +441,9 @@
       "type": "timeseries",
       "title": "Category Trend",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 8,
@@ -476,8 +487,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "time_series",
           "rawSql": "SELECT $__time(b.timestamp), COALESCE(b.category, 'unknown') AS category, count(*)::int AS n FROM builds b WHERE $__timeFilter(b.timestamp) AND b.category IS NOT NULL GROUP BY 1, 2 ORDER BY 1",
@@ -491,8 +503,9 @@
       "type": "table",
       "title": "Latest Builds with Category",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 10,
@@ -622,8 +635,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],

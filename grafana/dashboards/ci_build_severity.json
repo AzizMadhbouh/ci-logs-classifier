@@ -16,7 +16,7 @@
     "list": []
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-90d",
     "to": "now"
   },
   "timezone": "browser",
@@ -29,8 +29,9 @@
       "type": "stat",
       "title": "Total Builds",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 4,
@@ -74,8 +75,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -91,8 +93,9 @@
       "type": "stat",
       "title": "Failure Rate %",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 4,
@@ -136,8 +139,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -153,8 +157,9 @@
       "type": "stat",
       "title": "Critical/High Issues",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 4,
@@ -198,8 +203,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -215,8 +221,9 @@
       "type": "stat",
       "title": "Latest Build LLM Severity",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 4,
@@ -260,8 +267,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -277,8 +285,9 @@
       "type": "timeseries",
       "title": "Issue Severity Trend",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 8,
@@ -383,8 +392,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "time_series",
           "rawSql": "SELECT $__time(b.timestamp), i.severity, count(*)::int AS n FROM build_issues i JOIN builds b ON b.build_id = i.build_id WHERE $__timeFilter(b.timestamp) AND i.severity IS NOT NULL GROUP BY 1, 2 ORDER BY 1",
@@ -398,8 +408,9 @@
       "type": "timeseries",
       "title": "Errors & Warnings per Build",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 8,
@@ -443,8 +454,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "time_series",
           "rawSql": "SELECT $__time(timestamp), error_count AS \"errors\" FROM builds WHERE $__timeFilter(timestamp)",
@@ -453,8 +465,9 @@
         },
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "time_series",
           "rawSql": "SELECT $__time(timestamp), warning_count AS \"warnings\" FROM builds WHERE $__timeFilter(timestamp)",
@@ -468,8 +481,9 @@
       "type": "barchart",
       "title": "Issues by Severity",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 9,
@@ -518,8 +532,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -534,8 +549,9 @@
       "type": "piechart",
       "title": "Severity Distribution",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 9,
@@ -587,8 +603,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],
@@ -603,8 +620,9 @@
       "type": "table",
       "title": "Latest Builds",
       "datasource": {
-        "type": "postgres",
-        "uid": "buildhistory"
+        "type": "grafana-postgresql-datasource",
+        "uid": "buildhistory",
+        "database": "buildhistory"
       },
       "gridPos": {
         "h": 10,
@@ -772,8 +790,9 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
-            "uid": "buildhistory"
+            "type": "grafana-postgresql-datasource",
+            "uid": "buildhistory",
+            "database": "buildhistory"
           },
           "format": "table",
           "group": [],

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "dashboards"
-DS = {"type": "postgres", "uid": "buildhistory"}
+DS = {"type": "grafana-postgresql-datasource", "uid": "buildhistory", "database": "buildhistory"}
 
 
 def statistic(title, sql, unit="", calc="lastNotNull"):
@@ -120,7 +120,7 @@ def main():
         "schemaVersion": 39,
         "tags": ["ci", "severity"],
         "templating": {"list": []},
-        "time": {"from": "now-30d", "to": "now"},
+        "time": {"from": "now-90d", "to": "now"},
         "timezone": "browser",
         "title": "CI Build Severity & Health",
         "uid": "ci-build-severity",
@@ -158,7 +158,7 @@ def main():
         "schemaVersion": 39,
         "tags": ["ci"],
         "templating": {"list": []},
-        "time": {"from": "now-30d", "to": "now"},
+        "time": {"from": "now-90d", "to": "now"},
         "timezone": "browser",
         "title": "CI Build Issues Deep Dive",
         "uid": "ci-build-issues",

@@ -15,7 +15,7 @@
     "list": []
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-90d",
     "to": "now"
   },
   "timezone": "browser",
@@ -28,7 +28,7 @@
       "type": "piechart",
       "title": "Issue Severity",
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "buildhistory"
       },
       "gridPos": {
@@ -81,7 +81,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
+            "type": "grafana-postgresql-datasource",
             "uid": "buildhistory"
           },
           "format": "table",
@@ -97,7 +97,7 @@
       "type": "piechart",
       "title": "Issue Category",
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "buildhistory"
       },
       "gridPos": {
@@ -150,7 +150,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
+            "type": "grafana-postgresql-datasource",
             "uid": "buildhistory"
           },
           "format": "table",
@@ -166,7 +166,7 @@
       "type": "barchart",
       "title": "Errors vs Warnings",
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "buildhistory"
       },
       "gridPos": {
@@ -216,7 +216,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
+            "type": "grafana-postgresql-datasource",
             "uid": "buildhistory"
           },
           "format": "table",
@@ -232,7 +232,7 @@
       "type": "table",
       "title": "Issue Detail",
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "buildhistory"
       },
       "gridPos": {
@@ -346,7 +346,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
+            "type": "grafana-postgresql-datasource",
             "uid": "buildhistory"
           },
           "format": "table",
@@ -362,7 +362,7 @@
       "type": "piechart",
       "title": "Category Distribution",
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "buildhistory"
       },
       "gridPos": {
@@ -415,7 +415,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
+            "type": "grafana-postgresql-datasource",
             "uid": "buildhistory"
           },
           "format": "table",
@@ -431,7 +431,7 @@
       "type": "timeseries",
       "title": "Category Trend",
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "buildhistory"
       },
       "gridPos": {
@@ -476,7 +476,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
+            "type": "grafana-postgresql-datasource",
             "uid": "buildhistory"
           },
           "format": "time_series",
@@ -491,7 +491,7 @@
       "type": "table",
       "title": "Latest Builds with Category",
       "datasource": {
-        "type": "postgres",
+        "type": "grafana-postgresql-datasource",
         "uid": "buildhistory"
       },
       "gridPos": {
@@ -622,7 +622,7 @@
       "targets": [
         {
           "datasource": {
-            "type": "postgres",
+            "type": "grafana-postgresql-datasource",
             "uid": "buildhistory"
           },
           "format": "table",

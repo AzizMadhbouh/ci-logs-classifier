@@ -3,14 +3,16 @@ apiVersion: 1
 
 datasources:
   - name: Build History Postgres
+    uid: buildhistory
     type: postgres
     access: proxy
     url: ${DB_HOST}:${DB_PORT}
-    database: ${DB_NAME}
+    database: buildhistory
     user: ${DB_USER}
     secureJsonData:
       password: ${DB_PASSWORD}
     jsonData:
+      database: buildhistory
       sslmode: disable
       maxOpenConns: 100
       maxIdleConns: 10

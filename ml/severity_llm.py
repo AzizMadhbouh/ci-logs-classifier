@@ -206,6 +206,75 @@ def _try_llm(root_cause, evidence, timeout):
     return *_parse_severity(_call_gemini(root_cause, evidence, key, timeout)), "gemini"
 
 
+_CATEGORY_PROMPT = (
+    "You classify a CI/CD build log into exactly one of the given candidate categories. "
+    "Return ONLY a JSON object with two keys:\n"
+    '  {"category": "<one of the candidates, or \\"unknown\\">", "reason": "<one short sentence>"}\n'
+    "Pick \"unknown\" when the log does not clearly match any candidate."
+)
+
+
+def adjudicate_category(candidates, evidence, timeout=60):
+    """Gemini adjudication for low-confidence classifier outputs.
+
+    `candidates` is a non-empty list of category labels, `evidence` the log text.
+    Returns (label, reason) where label is one of candidates or "unknown".
+    Raises RuntimeError when the LLM is disabled/unavailable so callers can
+    fall back to "unknown" without storing a misleading verdict.
+    """
+    candidates = [c for c in candidates if c and c != "unknown"]
+    if not candidates:
+        raise RuntimeError("no candidates to adjudicate")
+    provider = PROVIDER
+    if provider == "none":
+        raise RuntimeError("SEVERITY_LLM_PROVIDER=none (disabled)")
+    if provider != "gemini":
+        raise RuntimeError(f"unsupported SEVERITY_LLM_PROVIDER={provider!r}")
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise RuntimeError("GEMINI_API_KEY not set")
+    prompt = (
+        _CATEGORY_PROMPT
+        + "\nCandidates: " + ", ".join(candidates)
+        + "\n\nLog:\n" + (evidence or "")[:6000]
+    )
+    body = {
+        "system_instruction": {"parts": [{"text": prompt}]},
+        "contents": [{"parts": [{"text": "Classify this log."}]}],
+        "generationConfig": {"temperature": 0, "maxOutputTokens": 300},
+    }
+    primary = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    models = [primary] + [m for m in _MODEL_FALLBACKS if m != primary]
+    last_err = None
+    for model in models:
+        try:
+            req = urllib.request.Request(
+                f"{GEMINI_URL}/{model}:generateContent?key=" + key,
+                data=json.dumps(body).encode("utf-8"),
+                headers={"content-type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            parts = ((data.get("candidates") or [{}])[0].get("content") or {}).get("parts") or []
+            text = "".join(p.get("text", "") for p in parts)
+            start, end = text.find("{"), text.rfind("}")
+            if start != -1 and end > start:
+                obj = json.loads(text[start:end + 1])
+                label = obj.get("category")
+                if label in candidates:
+                    return label, obj.get("reason") or ""
+                if label == "unknown":
+                    return "unknown", obj.get("reason") or ""
+            last_err = RuntimeError("unparseable LLM output: " + text[:200])
+        except urllib.error.HTTPError as e:
+            last_err = e
+            if e.code == 429:
+                continue  # quota exhausted -> next model
+            time.sleep(_retry_delay(e, 0))
+        except Exception as e:  # noqa: BLE001 - adjudication must never crash callers
+            last_err = e
+    raise RuntimeError(f"all Gemini models failed: {type(last_err).__name__}: {last_err}")
 def classify_severity(root_cause, evidence, api_key=None, model=None, timeout=120, fallback_policy=True):
     """Gemini severity with deterministic policy as fallback.
     With fallback_policy=False, a failed/unparseable LLM call returns

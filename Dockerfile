@@ -13,9 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python deps first (cache layer)
+# Install Python deps first (cache layer).
+# CPU torch pinned explicitly: the inline --index-url in requirements.txt is
+# not honored reliably, and a GPU torch (+2-3GB nvidia deps) OOMs the build.
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install -r requirements.txt
 
 # Copy source
 COPY . .
