@@ -15,6 +15,9 @@ venv/
 
 # ML model artifacts (commit via HuggingFace instead)
 model.safetensors
+category_model_finetuned/
+category-extended.zip
+FineTuning*.ipynb
 *.pkl
 tokenizer.json
 tokenizer_config.json

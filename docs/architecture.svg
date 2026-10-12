@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="560" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="1160" height="560" rx="12" fill="#f6f8fa"/>
+  <text x="580" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1f2328">CI Logs Classifier — Architecture</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 z" fill="#59636e"/>
+    </marker>
+    <marker id="arrowD" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 z" fill="#0969da"/>
+    </marker>
+  </defs>
+
+  <!-- Row 1: live pipeline -->
+  <g font-size="12" fill="#1f2328">
+    <rect x="16" y="110" width="150" height="86" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <text x="91" y="132" text-anchor="middle" font-weight="bold">Jenkins</text>
+    <text x="91" y="150" text-anchor="middle">console logs</text>
+    <text x="91" y="166" text-anchor="middle">SARIF · JSON · JUnit</text>
+    <text x="91" y="182" text-anchor="middle">artifacts</text>
+
+    <rect x="182" y="110" width="170" height="86" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <text x="267" y="132" text-anchor="middle" font-weight="bold">Ingestion</text>
+    <text x="267" y="150" text-anchor="middle">feed_jenkins_builds.py</text>
+    <text x="267" y="166" text-anchor="middle">watch_builds.py (:30s)</text>
+    <text x="267" y="182" text-anchor="middle">host-side via wsl</text>
+
+    <rect x="368" y="110" width="160" height="86" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <text x="448" y="132" text-anchor="middle" font-weight="bold">Parsers</text>
+    <text x="448" y="150" text-anchor="middle">flake8/bandit SARIF</text>
+    <text x="448" y="166" text-anchor="middle">pylint · JUnit · black</text>
+    <text x="448" y="182" text-anchor="middle">mypy · raw-log fallback</text>
+
+    <rect x="544" y="110" width="200" height="86" rx="8" fill="#dafbe6" stroke="#1a7f37" stroke-width="2"/>
+    <text x="644" y="130" text-anchor="middle" font-weight="bold">Category model</text>
+    <text x="644" y="147" text-anchor="middle">ModernBERT · 32 classes</text>
+    <text x="644" y="163" text-anchor="middle">pre-filter → reject 0.6</text>
+    <text x="644" y="179" text-anchor="middle">→ LLM adjudication</text>
+
+    <rect x="760" y="110" width="160" height="86" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/>
+    <text x="840" y="132" text-anchor="middle" font-weight="bold">Postgres 16</text>
+    <text x="840" y="150" text-anchor="middle">db: buildhistory</text>
+    <text x="840" y="166" text-anchor="middle">builds + build_issues</text>
+    <text x="840" y="182" text-anchor="middle">Alembic migrations</text>
+
+    <rect x="936" y="110" width="208" height="86" rx="8" fill="#ffebe9" stroke="#cf222e" stroke-width="1.5"/>
+    <text x="1040" y="132" text-anchor="middle" font-weight="bold">Grafana :3001</text>
+    <text x="1040" y="150" text-anchor="middle">Severity &amp; Health</text>
+    <text x="1040" y="166" text-anchor="middle">Issues Deep Dive</text>
+    <text x="1040" y="182" text-anchor="middle">provisioned SQL panels</text>
+  </g>
+
+  <!-- Row 1 arrows -->
+  <g stroke="#59636e" stroke-width="1.5" marker-end="url(#arrow)">
+    <line x1="166" y1="153" x2="180" y2="153"/>
+    <line x1="352" y1="153" x2="366" y2="153"/>
+    <line x1="528" y1="153" x2="542" y2="153"/>
+    <line x1="744" y1="153" x2="758" y2="153"/>
+    <line x1="920" y1="153" x2="934" y2="153"/>
+  </g>
+
+  <!-- Severity branch -->
+  <rect x="544" y="240" width="200" height="70" rx="8" fill="#f6f8fa" stroke="#59636e" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="644" y="263" text-anchor="middle" font-size="12" font-weight="bold" fill="#1f2328">Severity scoring</text>
+  <text x="644" y="281" text-anchor="middle" font-size="12" fill="#1f2328">Gemini LLM → policy fallback</text>
+  <text x="644" y="297" text-anchor="middle" font-size="12" fill="#1f2328">source stored per build</text>
+  <g stroke="#59636e" stroke-width="1.5" marker-end="url(#arrow)">
+    <line x1="644" y1="196" x2="644" y2="238"/>
+    <path d="M 744 275 L 800 275 L 800 196 L 812 196" fill="none"/>
+  </g>
+
+  <!-- Row 2: training -->
+  <text x="16" y="352" font-size="13" font-weight="bold" fill="#1f2328">Training (offline, Kaggle T4):</text>
+  <g font-size="12" fill="#1f2328">
+    <rect x="16" y="364" width="230" height="70" rx="8" fill="#ffffff" stroke="#59636e" stroke-width="1.5"/>
+    <text x="131" y="387" text-anchor="middle" font-weight="bold">train_real.csv</text>
+    <text x="131" y="405" text-anchor="middle">28,471 real CI logs</text>
+    <text x="131" y="421" text-anchor="middle">+ 843 Veloren logs</text>
+
+    <rect x="262" y="364" width="210" height="70" rx="8" fill="#ffffff" stroke="#59636e" stroke-width="1.5"/>
+    <text x="367" y="387" text-anchor="middle" font-weight="bold">finetune_category.py</text>
+    <text x="367" y="405" text-anchor="middle">head warmup → full fine-tune</text>
+    <text x="367" y="421" text-anchor="middle">weighted CE · macro-F1</text>
+
+    <rect x="488" y="364" width="190" height="70" rx="8" fill="#dafbe6" stroke="#1a7f37" stroke-width="1.5"/>
+    <text x="583" y="387" text-anchor="middle" font-weight="bold">32-class ModernBERT</text>
+    <text x="583" y="405" text-anchor="middle">old weights kept</text>
+    <text x="583" y="421" text-anchor="middle">new: Xavier-init</text>
+  </g>
+  <g stroke="#0969da" stroke-width="1.5" marker-end="url(#arrowD)">
+    <line x1="246" y1="399" x2="260" y2="399"/>
+    <line x1="472" y1="399" x2="486" y2="399"/>
+    <path d="M 583 364 L 583 210" fill="none" stroke-dasharray="5,3"/>
+  </g>
+
+  <!-- Footer notes -->
+  <g font-size="12" fill="#59636e">
+    <text x="16" y="470">Guardrails: 7 tool-output pre-filter regexes · confidence reject @ 0.6 → <tspan font-weight="bold">unknown</tspan> · structured logging (label/confidence/source/rejected) for drift monitoring.</text>
+    <text x="16" y="492">Secrets (.env) gitignored &amp; never committed · weights/datasets gitignored (Hugging Face instead) · tests: 84 passed, 1 skipped.</text>
+    <text x="16" y="524">Live snapshot 2026-10-12: 46 builds (26 FAILURE / 20 SUCCESS) · 107 issues · window 2026-08-21 → 2026-09-18.</text>
+  </g>
+</svg>
