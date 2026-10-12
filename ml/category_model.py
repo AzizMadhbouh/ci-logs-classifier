@@ -14,6 +14,7 @@ Serving guardrails (production):
   * every prediction is logged (ml.category_model logger) with label,
     confidence and source for drift monitoring.
 """
+
 import logging
 import os
 import re
@@ -134,17 +135,23 @@ _TOOL_PATTERNS = [
     ),
     # mypy:  path:line: error: message [code]
     (
-        re.compile(r"^[\w./\\-]+:\d+:\s*(error|note|warning):.*\[[a-z][a-z0-9-]*\]\s*$"),
+        re.compile(
+            r"^[\w./\\-]+:\d+:\s*(error|note|warning):.*\[[a-z][a-z0-9-]*\]\s*$"
+        ),
         ("Lint", "syntax_error", "Build"),
     ),
     # bandit:  >> Issue: [B1xx:...] ...  /  Bandit B1xx (...)
     (
-        re.compile(r">> Issue:|Bandit\s+B\d{3}\b|hardcoded[_-]password|B10[5-8]\b|B6\d{2}\b"),
+        re.compile(
+            r">> Issue:|Bandit\s+B\d{3}\b|hardcoded[_-]password|B10[5-8]\b|B6\d{2}\b"
+        ),
         ("Security", "auth_permission_error"),
     ),
     # eslint / tsc:  error TS1234  /  ERROR in ./file  /  ✖ N problems
     (
-        re.compile(r"\berror TS\d+\b|ERROR in \S+|\d+ problems? \(\d+ errors?|✖ \d+ problems?"),
+        re.compile(
+            r"\berror TS\d+\b|ERROR in \S+|\d+ problems? \(\d+ errors?|✖ \d+ problems?"
+        ),
         ("Lint", "Build", "syntax_error"),
     ),
     # shellcheck:  path:line:col: warning: ... [SC1234]
@@ -154,7 +161,9 @@ _TOOL_PATTERNS = [
     ),
     # secret scanners: trivy / gitleaks / trufflehog
     (
-        re.compile(r"trivy|gitleaks|trufflehog|leaked secret|PRIVATE KEY|AKIA[0-9A-Z]{16}"),
+        re.compile(
+            r"trivy|gitleaks|trufflehog|leaked secret|PRIVATE KEY|AKIA[0-9A-Z]{16}"
+        ),
         ("Security", "auth_permission_error"),
     ),
     # pytest failures:  FAILED path::Test::test  /  AssertionError
@@ -225,9 +234,9 @@ def predict_category(logs, topk=3):
     text = (logs or "")[:20000]
     encoding = tokenizer.encode(text)
     input_ids = torch.tensor([encoding.ids], dtype=torch.long).to(device)
-    attention_mask = torch.tensor(
-        [encoding.attention_mask], dtype=torch.long
-    ).to(device)
+    attention_mask = torch.tensor([encoding.attention_mask], dtype=torch.long).to(
+        device
+    )
 
     with torch.no_grad():
         logits = model(
@@ -254,11 +263,15 @@ def predict_category(logs, topk=3):
     try:
         from ml.severity_llm import adjudicate_category
 
-        adjudicated, _reason = adjudicate_category(
-            [lab for lab, _ in top], text
-        )
+        adjudicated, _reason = adjudicate_category([lab for lab, _ in top], text)
         if adjudicated in labels:
-            adj_prob = next(p for lab, p in top if lab == adjudicated)
+            # The LLM may legitimately pick a valid label ranked below top-k
+            # (torch.topk tie order is platform-dependent); fall back to that
+            # label's own model probability instead of crashing to "unknown".
+            adj_prob = next(
+                (p for lab, p in top if lab == adjudicated),
+                float(probs[labels.index(adjudicated)]),
+            )
             _log_prediction(adjudicated, adj_prob, "llm", len(labels))
             return adjudicated, adj_prob, top
     except Exception as e:  # noqa: BLE001 - adjudication must never break serving
