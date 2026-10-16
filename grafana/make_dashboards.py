@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent / "dashboards"
+OUT = Path(__file__).resolve().parent / "provisioning" / "dashboards" / "definitions"
 DS = {"type": "grafana-postgresql-datasource", "uid": "buildhistory", "database": "buildhistory"}
 
 

@@ -21,19 +21,19 @@ pipeline {
 
         stage('Analyze') {
             steps {
-                sh '. venv/bin/activate && black --check src/ tests/ > build-output.log 2>&1 || true'
-                sh '. venv/bin/activate && flake8 --format=sarif --output-file=flake8.sarif src/ tests/ || true'
-                sh '. venv/bin/activate && flake8 src/ tests/ >> build-output.log 2>&1 || true'
-                sh '. venv/bin/activate && mypy src/ >> build-output.log 2>&1 || true'
-                sh '. venv/bin/activate && bandit -r src/ -f sarif -o bandit.sarif || true'
-                sh '. venv/bin/activate && bandit -r src/ >> build-output.log 2>&1 || true'
-                sh '. venv/bin/activate && pylint --output-format=json:pylint.json src/ >> build-output.log 2>&1 || true'
+                sh '. venv/bin/activate && black --check feed_jenkins_builds.py watch_builds.py db.py ml/ tests/ > build-output.log 2>&1 || true'
+                sh '. venv/bin/activate && flake8 --format=sarif --output-file=flake8.sarif feed_jenkins_builds.py watch_builds.py db.py ml/ tests/ || true'
+                sh '. venv/bin/activate && flake8 feed_jenkins_builds.py watch_builds.py db.py ml/ tests/ >> build-output.log 2>&1 || true'
+                sh '. venv/bin/activate && mypy feed_jenkins_builds.py db.py ml/ >> build-output.log 2>&1 || true'
+                sh '. venv/bin/activate && bandit -r feed_jenkins_builds.py watch_builds.py db.py ml/ -f sarif -o bandit.sarif || true'
+                sh '. venv/bin/activate && bandit -r feed_jenkins_builds.py watch_builds.py db.py ml/ >> build-output.log 2>&1 || true'
+                sh '. venv/bin/activate && pylint --output-format=json:pylint.json feed_jenkins_builds.py watch_builds.py db.py ml/ >> build-output.log 2>&1 || true'
             }
         }
 
         stage('Test') {
             steps {
-                sh '. venv/bin/activate && pytest --cov=src --cov-report=html --junitxml=report.xml >> build-output.log 2>&1 || true'
+                sh '. venv/bin/activate && pytest --cov=feed_jenkins_builds --cov=ml --cov-report=html --junitxml=report.xml >> build-output.log 2>&1 || true'
             }
         }
 
@@ -52,13 +52,15 @@ pipeline {
     post {
         always {
             script {
+                // Ingestion into Postgres is handled by feed_jenkins_builds.py / watch_builds.py,
+                // not by the legacy analyze_history.py --save path.
                 def buildResult = currentBuild.result ?: 'SUCCESS'
-                sh ". venv/bin/activate && python analyze_history.py --save \$BUILD_NUMBER analysis-report.txt --result ${buildResult} || true"
+                sh "echo ${buildResult} > build-result.txt || true"
             }
             archiveArtifacts artifacts: '*.sarif, *.json, build-output.log', allowEmptyArchive: true
             archiveArtifacts artifacts: 'htmlcov/**', allowEmptyArchive: true
             archiveArtifacts artifacts: 'report.xml', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'analysis-report.txt', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'build-result.txt', allowEmptyArchive: true
         }
     }
 }

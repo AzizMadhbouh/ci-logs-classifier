@@ -34,18 +34,18 @@ jobs:
         run: ruff check .
 
       - name: Format check (black)
-        run: python -m black --check src/ tests/
+        run: python -m black --check feed_jenkins_builds.py watch_builds.py db.py ml/ tests/
 
       - name: Type check (mypy)
         run: >
           python -m mypy
           --ignore-missing-imports --follow-imports=silent
-          feed_jenkins_builds.py
-          ml/severity_llm.py ml/category_model.py ml/rootcause_model.py
-          logging_config.py watch_builds.py build_report.py
+          feed_jenkins_builds.py db.py
+          ml/severity_llm.py ml/category_model.py
+          logging_config.py watch_builds.py
 
       - name: Test (pytest)
-        run: python -m pytest -q --cov=feed_jenkins_builds --cov=ml --cov-report=term-missing
+        run: python -m pytest -q --cov=feed_jenkins_builds --cov=db --cov=ml --cov-report=term-missing
 
       # Non-blocking: reports known CVEs in the dependency tree without
       # turning every new advisory into a red build.

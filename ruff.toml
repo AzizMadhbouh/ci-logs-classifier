@@ -11,5 +11,5 @@ select = ["E4", "E7", "E9", "F"]
 "ml/*" = ["F841", "E741", "E731"]
 # These entrypoints load .env / sys.path before importing project modules on purpose.
 "feed_jenkins_builds.py" = ["E402"]
-"build_report.py" = ["E402"]
 "watch_builds.py" = ["E402"]
+"db.py" = ["E402"]

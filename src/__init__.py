@@ -1,1 +1,0 @@
-"""Sales data processing package."""

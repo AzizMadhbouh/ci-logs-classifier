@@ -28,7 +28,7 @@ if _env_path.exists():
             k, v = line.split("=", 1)
             os.environ.setdefault(k, v)
 
-from analyze_history import ensure_schema, get_db_conn
+from db import ensure_schema, get_db_conn
 from ml.severity_llm import classify_severity
 from ml.category_model import predict_category
 

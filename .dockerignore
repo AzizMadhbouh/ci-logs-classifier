@@ -10,6 +10,7 @@ __pycache__
 
 # Large artifacts not needed inside the image
 model.safetensors
+category_model_finetuned/
 *.pkl
 *.jpg
 *.pdf

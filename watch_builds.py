@@ -15,13 +15,8 @@ For auto-start you can also register it as a logon scheduled task:
 import argparse
 import time
 
-from feed_jenkins_builds import (
-    ensure_schema,
-    get_db_conn,
-    ingest_build,
-    list_builds,
-    max_build_in_db,
-)
+from db import ensure_schema, get_db_conn
+from feed_jenkins_builds import ingest_build, list_builds, max_build_in_db
 
 DEFAULT_INTERVAL = 30
 
