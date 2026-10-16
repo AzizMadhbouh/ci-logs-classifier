@@ -2,6 +2,7 @@
 
 Preserves 10 original classes from model.safetensors, adds new classes from train_real.csv.
 """
+
 import json
 import shutil
 from pathlib import Path
@@ -17,7 +18,6 @@ from transformers import (
 )
 from safetensors.torch import load_file
 from tokenizers import Tokenizer
-
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 LOCAL_WEIGHTS = PROJECT_ROOT / "model.safetensors"
@@ -42,7 +42,9 @@ def main():
     # Get existing model labels
     config = AutoConfig.from_pretrained(str(PROJECT_ROOT))
     _id2l = config.id2label
-    existing_labels = [_id2l[i] if i in _id2l else _id2l[str(i)] for i in range(config.num_labels)]
+    existing_labels = [
+        _id2l[i] if i in _id2l else _id2l[str(i)] for i in range(config.num_labels)
+    ]
     print(f"Existing model labels ({len(existing_labels)}): {existing_labels}")
 
     # Add new labels from train_real.csv
@@ -66,10 +68,10 @@ def main():
 
     # Copy old weights, initialize new
     with torch.no_grad():
-        model.classifier.weight[:len(existing_labels)] = old_head.weight
-        model.classifier.bias[:len(existing_labels)] = old_head.bias
-    torch.nn.init.xavier_uniform_(model.classifier.weight[len(existing_labels):])
-    model.classifier.bias[len(existing_labels):].zero_()
+        model.classifier.weight[: len(existing_labels)] = old_head.weight
+        model.classifier.bias[: len(existing_labels)] = old_head.bias
+    torch.nn.init.xavier_uniform_(model.classifier.weight[len(existing_labels) :])
+    model.classifier.bias[len(existing_labels) :].zero_()
 
     model.config.id2label = id2label
     model.config.label2id = label2id

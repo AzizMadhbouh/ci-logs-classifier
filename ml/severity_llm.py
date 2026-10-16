@@ -33,7 +33,9 @@ _UPGRADE_SIGNALS = tuple(_POLICY["signals"]["upgrade"].keys())
 _SEVERITY_RANK = {"Low": 0, "Medium": 1, "High": 2, "Critical": 3}
 
 _BANDIT_SEV = re.compile(r"Severity:\s*(Low|Medium|High|Undefined)", re.IGNORECASE)
-_PREFIX_RE = re.compile(r"^\s*(?:[\w./\\-]+):\d+(?::\d+)?:\s*([A-Z])\d{3,4}(?::|\s)", re.IGNORECASE)
+_PREFIX_RE = re.compile(
+    r"^\s*(?:[\w./\\-]+):\d+(?::\d+)?:\s*([A-Z])\d{3,4}(?::|\s)", re.IGNORECASE
+)
 _PYLINT_SUFFIX = re.compile(r"\([a-z0-9-]+\)\s*$", re.IGNORECASE)
 
 _SYSTEM_PROMPT = (
@@ -42,12 +44,12 @@ _SYSTEM_PROMPT = (
     " Return ONLY a JSON object with two keys:\n"
     '  {"severity": "Low"|"Medium"|"High"|"Critical", "reason": "<one short sentence>"}\n'
     "Rubric:\n"
-    '- Low: cosmetic/warning-level issue, build continues; e.g. lint style notes, deprecation, flaky retry.\n'
-    '- Medium: partial failure or transient problem that blocks a step but not the whole system; '
+    "- Low: cosmetic/warning-level issue, build continues; e.g. lint style notes, deprecation, flaky retry.\n"
+    "- Medium: partial failure or transient problem that blocks a step but not the whole system; "
     "e.g. test flake, timeout with retry, warning that needs attention.\n"
-    '- High: a real failure requiring a fix; e.g. compile/test/build failure, dependency install error, '
+    "- High: a real failure requiring a fix; e.g. compile/test/build failure, dependency install error, "
     "deployment error, auth/permission failure.\n"
-    '- Critical: outage, security breach, data loss, production impact, leaked secret, disk full, '
+    "- Critical: outage, security breach, data loss, production impact, leaked secret, disk full, "
     "fatal/crash of the whole pipeline or service.\n"
     "When in doubt prefer the boundary that the log text itself shows."
 )
@@ -57,9 +59,9 @@ def _tool_severity(line):
     m = _BANDIT_SEV.search(line)
     if m:
         s = m.group(1).capitalize()
-        return 'Medium' if s == 'Undefined' else s
-    if line.lstrip().startswith('>> Issue:'):
-        return 'Low'
+        return "Medium" if s == "Undefined" else s
+    if line.lstrip().startswith(">> Issue:"):
+        return "Low"
     m = _PREFIX_RE.search(line)
     if m:
         code = m.group(1).upper()
@@ -79,7 +81,11 @@ def policy_severity(root_cause, text):
     if any(s in lower for s in _UPGRADE_SIGNALS):
         return "Critical"
     if any(s in lower for s in _DOWNGRADE_SIGNALS):
-        lowered = "Medium" if _SEVERITY_RANK[baseline] > _SEVERITY_RANK["Medium"] else baseline
+        lowered = (
+            "Medium"
+            if _SEVERITY_RANK[baseline] > _SEVERITY_RANK["Medium"]
+            else baseline
+        )
         return lowered
     return baseline
 
@@ -93,7 +99,9 @@ def _gemini_body(root_cause, evidence, force_json):
     if force_json:
         cfg["responseMimeType"] = "application/json"
     if os.environ.get("GEMINI_THINKING", "0") != "1":
-        cfg["thinkingConfig"] = {"thinkingBudget": 0}  # gemini 3.x is a thinking model by default
+        cfg["thinkingConfig"] = {
+            "thinkingBudget": 0
+        }  # gemini 3.x is a thinking model by default
     return {
         "system_instruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
         "contents": [{"parts": [{"text": _user_text(root_cause, evidence)}]}],
@@ -131,7 +139,7 @@ def _retry_delay(e, attempt):
             return min(float(str(delay).rstrip("s")), 120)
     except Exception:
         pass
-    return min(2 ** attempt + random.uniform(0, 1), 60)
+    return min(2**attempt + random.uniform(0, 1), 60)
 
 
 def _call_gemini(root_cause, evidence, api_key, timeout):
@@ -146,9 +154,13 @@ def _call_gemini(root_cause, evidence, api_key, timeout):
                 data = _gemini_once(url, api_key, root_cause, evidence, timeout, True)
                 break
             except urllib.error.HTTPError as e:
-                if e.code == 400:  # model may not support JSON mode -> retry once without it
+                if (
+                    e.code == 400
+                ):  # model may not support JSON mode -> retry once without it
                     try:
-                        data = _gemini_once(url, api_key, root_cause, evidence, timeout, False)
+                        data = _gemini_once(
+                            url, api_key, root_cause, evidence, timeout, False
+                        )
                         break
                     except urllib.error.HTTPError as e2:
                         e = e2
@@ -175,7 +187,7 @@ def _parse_severity(text):
     try:
         start, end = text.find("{"), text.rfind("}")
         if start != -1 and end > start:
-            obj = json.loads(text[start:end + 1])
+            obj = json.loads(text[start : end + 1])
             sev = obj.get("severity")
             if isinstance(sev, str):
                 sev = sev.capitalize()
@@ -210,7 +222,7 @@ _CATEGORY_PROMPT = (
     "You classify a CI/CD build log into exactly one of the given candidate categories. "
     "Return ONLY a JSON object with two keys:\n"
     '  {"category": "<one of the candidates, or \\"unknown\\">", "reason": "<one short sentence>"}\n'
-    "Pick \"unknown\" when the log does not clearly match any candidate."
+    'Pick "unknown" when the log does not clearly match any candidate.'
 )
 
 
@@ -235,8 +247,10 @@ def adjudicate_category(candidates, evidence, timeout=60):
         raise RuntimeError("GEMINI_API_KEY not set")
     prompt = (
         _CATEGORY_PROMPT
-        + "\nCandidates: " + ", ".join(candidates)
-        + "\n\nLog:\n" + (evidence or "")[:6000]
+        + "\nCandidates: "
+        + ", ".join(candidates)
+        + "\n\nLog:\n"
+        + (evidence or "")[:6000]
     )
     body = {
         "system_instruction": {"parts": [{"text": prompt}]},
@@ -256,11 +270,13 @@ def adjudicate_category(candidates, evidence, timeout=60):
             )
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-            parts = ((data.get("candidates") or [{}])[0].get("content") or {}).get("parts") or []
+            parts = ((data.get("candidates") or [{}])[0].get("content") or {}).get(
+                "parts"
+            ) or []
             text = "".join(p.get("text", "") for p in parts)
             start, end = text.find("{"), text.rfind("}")
             if start != -1 and end > start:
-                obj = json.loads(text[start:end + 1])
+                obj = json.loads(text[start : end + 1])
                 label = obj.get("category")
                 if label in candidates:
                     return label, obj.get("reason") or ""
@@ -274,8 +290,14 @@ def adjudicate_category(candidates, evidence, timeout=60):
             time.sleep(_retry_delay(e, 0))
         except Exception as e:  # noqa: BLE001 - adjudication must never crash callers
             last_err = e
-    raise RuntimeError(f"all Gemini models failed: {type(last_err).__name__}: {last_err}")
-def classify_severity(root_cause, evidence, api_key=None, model=None, timeout=120, fallback_policy=True):
+    raise RuntimeError(
+        f"all Gemini models failed: {type(last_err).__name__}: {last_err}"
+    )
+
+
+def classify_severity(
+    root_cause, evidence, api_key=None, model=None, timeout=120, fallback_policy=True
+):
     """Gemini severity with deterministic policy as fallback.
     With fallback_policy=False, a failed/unparseable LLM call returns
     (None, None, reason) so callers can leave llm_severity NULL instead of
@@ -290,9 +312,17 @@ def classify_severity(root_cause, evidence, api_key=None, model=None, timeout=12
         if sev is not None:
             return sev, provider, reason or ""
         if fallback_policy:
-            return policy_severity(root_cause, evidence), "policy", "unparseable LLM output"
+            return (
+                policy_severity(root_cause, evidence),
+                "policy",
+                "unparseable LLM output",
+            )
         return None, None, "unparseable LLM output"
     except Exception as e:
         if fallback_policy:
-            return policy_severity(root_cause, evidence), "policy", f"llm error: {type(e).__name__}: {e}"
+            return (
+                policy_severity(root_cause, evidence),
+                "policy",
+                f"llm error: {type(e).__name__}: {e}",
+            )
         return None, None, f"llm error: {type(e).__name__}: {e}"

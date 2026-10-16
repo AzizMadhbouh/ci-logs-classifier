@@ -10,6 +10,7 @@ Usage:
     python feed_jenkins_builds.py --since 30          # only build >= 30
     python feed_jenkins_builds.py --clear             # delete rows first
 """
+
 import argparse
 import json
 import os
@@ -18,7 +19,6 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 _env_path = Path(__file__).resolve().parent / ".env"
 if _env_path.exists():
@@ -103,7 +103,11 @@ def fetch_build(n):
 def parse_meta(meta):
     m_ts = re.search(r"<startTime>(\d+)</startTime>", meta)
     m_res = re.search(r"<result>([A-Z_]+)</result>", meta)
-    ts = datetime.fromtimestamp(int(m_ts.group(1)) / 1000, tz=timezone.utc) if m_ts else datetime.now(tz=timezone.utc)
+    ts = (
+        datetime.fromtimestamp(int(m_ts.group(1)) / 1000, tz=timezone.utc)
+        if m_ts
+        else datetime.now(tz=timezone.utc)
+    )
     result = m_res.group(1) if m_res else None
     return ts, result
 
@@ -132,13 +136,20 @@ def classify_line(line, pending_bandit):
     if line.startswith(">>"):
         m = BANDIT_ISSUE_RE.match(line)
         if m:
-            return None, {"code": m.group(1), "msg": m.group(2).strip(), "sev": None, "loc": None}
+            return None, {
+                "code": m.group(1),
+                "msg": m.group(2).strip(),
+                "sev": None,
+                "loc": None,
+            }
         return None, pending_bandit
 
     if pending_bandit is not None:
         m = BANDIT_SEVERITY_RE.match(line)
         if m:
-            pending_bandit["sev"] = "Medium" if m.group(1) == "Undefined" else m.group(1)
+            pending_bandit["sev"] = (
+                "Medium" if m.group(1) == "Undefined" else m.group(1)
+            )
             return None, pending_bandit
         m = BANDIT_LOCATION_RE.match(line)
         if m:
@@ -146,7 +157,12 @@ def classify_line(line, pending_bandit):
             sev = pending_bandit["sev"] or "Medium"
             code = pending_bandit["code"]
             line_txt = f"{code}: {pending_bandit['msg']}  ->  {pending_bandit['loc']}"
-            issue = {"severity": sev, "category": "bandit", "line": line_txt, "is_error": sev in ERROR_LEVELS}
+            issue = {
+                "severity": sev,
+                "category": "bandit",
+                "line": line_txt,
+                "is_error": sev in ERROR_LEVELS,
+            }
             return issue, None
         if line.strip() and not any(line.startswith(p) for p in BANDIT_CONTINUATION):
             return None, None
@@ -155,7 +171,12 @@ def classify_line(line, pending_bandit):
     if line.startswith("would reformat"):
         m = BLACK_RE.match(line)
         if m:
-            return {"severity": "Medium", "category": "black", "line": m.group(1), "is_error": False}, None
+            return {
+                "severity": "Medium",
+                "category": "black",
+                "line": m.group(1),
+                "is_error": False,
+            }, None
 
     m = MYPY_RE.match(line)
     if m:
@@ -164,21 +185,41 @@ def classify_line(line, pending_bandit):
             sev, err = "High", True
         else:
             sev, err = "Low", False
-        return {"severity": sev, "category": "mypy", "line": line.strip(), "is_error": err}, None
+        return {
+            "severity": sev,
+            "category": "mypy",
+            "line": line.strip(),
+            "is_error": err,
+        }, None
 
     m = PYLINT_RE.match(line)
     if m:
         sev = SEVERITY_POLICY["pylint"].get(m.group(2)[0], "Medium")
-        return {"severity": sev, "category": "pylint", "line": line.strip(), "is_error": sev in ERROR_LEVELS}, None
+        return {
+            "severity": sev,
+            "category": "pylint",
+            "line": line.strip(),
+            "is_error": sev in ERROR_LEVELS,
+        }, None
 
     m = FLAKE8_RE.match(line)
     if m:
         sev = SEVERITY_POLICY["flake8"].get(m.group(2)[0], "Medium")
-        return {"severity": sev, "category": "flake8", "line": line.strip(), "is_error": sev in ERROR_LEVELS}, None
+        return {
+            "severity": sev,
+            "category": "flake8",
+            "line": line.strip(),
+            "is_error": sev in ERROR_LEVELS,
+        }, None
 
     m = PYTEST_FAIL_RE.match(line)
     if m:
-        return {"severity": "High", "category": "test", "line": line.strip(), "is_error": True}, None
+        return {
+            "severity": "High",
+            "category": "test",
+            "line": line.strip(),
+            "is_error": True,
+        }, None
 
     return None, pending_bandit
 
@@ -204,7 +245,14 @@ def parse_sarif_flake8(sarif_text):
                 sev = "High" if level == "error" else "Medium"
                 is_err = level == "error"
                 line = f"{loc_str}: {rule_id} {msg}" if loc_str else f"{rule_id} {msg}"
-                issues.append({"severity": sev, "category": "flake8", "line": line, "is_error": is_err})
+                issues.append(
+                    {
+                        "severity": sev,
+                        "category": "flake8",
+                        "line": line,
+                        "is_error": is_err,
+                    }
+                )
     except Exception:
         pass
     return issues
@@ -231,7 +279,14 @@ def parse_sarif_bandit(sarif_text):
                 sev = "High" if level == "error" else "Medium"
                 is_err = level == "error"
                 line = f"{loc_str}: {rule_id} {msg}" if loc_str else f"{rule_id} {msg}"
-                issues.append({"severity": sev, "category": "bandit", "line": line, "is_error": is_err})
+                issues.append(
+                    {
+                        "severity": sev,
+                        "category": "bandit",
+                        "line": line,
+                        "is_error": is_err,
+                    }
+                )
     except Exception:
         pass
     return issues
@@ -249,11 +304,25 @@ def parse_pylint_json(json_text):
             line_no = item.get("line", "?")
             col = item.get("column", "?")
             typ = item.get("type", "warning")
-            sev_map = {"error": "High", "fatal": "Critical", "warning": "Medium", "refactor": "Low", "convention": "Low", "info": "Low"}
+            sev_map = {
+                "error": "High",
+                "fatal": "Critical",
+                "warning": "Medium",
+                "refactor": "Low",
+                "convention": "Low",
+                "info": "Low",
+            }
             sev = sev_map.get(typ, "Medium")
             is_err = typ in ("error", "fatal")
             line = f"{path}:{line_no}:{col}: {msg_id} {msg}"
-            issues.append({"severity": sev, "category": "pylint", "line": line, "is_error": is_err})
+            issues.append(
+                {
+                    "severity": sev,
+                    "category": "pylint",
+                    "line": line,
+                    "is_error": is_err,
+                }
+            )
     except Exception:
         pass
     return issues
@@ -264,6 +333,7 @@ def parse_junit_xml(xml_text):
     issues = []
     try:
         import xml.etree.ElementTree as ET
+
         root = ET.fromstring(xml_text)
         for testsuite in root.iter("testsuite"):
             for testcase in testsuite.iter("testcase"):
@@ -274,7 +344,14 @@ def parse_junit_xml(xml_text):
                     classname = testcase.get("classname", "")
                     msg = (failure.text if failure is not None else error.text) or ""
                     line = f"{classname}.{name} {msg}"
-                    issues.append({"severity": "High", "category": "test", "line": line, "is_error": True})
+                    issues.append(
+                        {
+                            "severity": "High",
+                            "category": "test",
+                            "line": line,
+                            "is_error": True,
+                        }
+                    )
     except Exception:
         pass
     return issues
@@ -288,7 +365,14 @@ def parse_black_log(log_text):
         if line.startswith("would reformat"):
             m = BLACK_RE.match(line)
             if m:
-                issues.append({"severity": "Medium", "category": "black", "line": m.group(1), "is_error": False})
+                issues.append(
+                    {
+                        "severity": "Medium",
+                        "category": "black",
+                        "line": m.group(1),
+                        "is_error": False,
+                    }
+                )
     return issues
 
 
@@ -316,7 +400,14 @@ def parse_artifacts(artifacts, log_text):
         if m:
             kind = m.group(2)
             sev, err = ("High", True) if kind == "error" else ("Low", False)
-            all_issues.append({"severity": sev, "category": "mypy", "line": line.strip(), "is_error": err})
+            all_issues.append(
+                {
+                    "severity": sev,
+                    "category": "mypy",
+                    "line": line.strip(),
+                    "is_error": err,
+                }
+            )
     return all_issues
 
 
@@ -369,7 +460,11 @@ def ingest_build(cur, n, require_complete=True, llm=True):
         cur.execute("SELECT llm_severity FROM builds WHERE build_id = %s", (n,))
         if cur.fetchone()[0] is None:
             if is_clean:
-                sev, source, reason = "Low", "policy", "Clean build: 0 errors, all tests pass"
+                sev, source, reason = (
+                    "Low",
+                    "policy",
+                    "Clean build: 0 errors, all tests pass",
+                )
             else:
                 sev, source, reason = classify_severity(
                     category, evidence, fallback_policy=False
@@ -403,7 +498,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--since", type=int, default=0)
     ap.add_argument("--clear", action="store_true")
-    ap.add_argument("--no-llm", action="store_true", help="skip LLM severity (rule-based only)")
+    ap.add_argument(
+        "--no-llm", action="store_true", help="skip LLM severity (rule-based only)"
+    )
     args = ap.parse_args()
 
     builds = [n for n in list_builds() if n >= args.since]

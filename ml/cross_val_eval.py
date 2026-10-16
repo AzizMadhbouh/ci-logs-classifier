@@ -8,6 +8,7 @@ Usage:
     python -m ml.cross_val_eval --model category --category-model ferjaboss/ci-logs-classifier
     python -m ml.cross_val_eval --model rootcause --rootcause-model aziz123123v/cicd-log-rootcause
 """
+
 import argparse
 import json
 from pathlib import Path
@@ -29,8 +30,10 @@ from torch.nn.utils.rnn import pad_sequence
 try:
     from tqdm import tqdm
 except ImportError:
+
     def tqdm(iterable, **kwargs):
         return iterable
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "pipeline-dataset"
@@ -106,8 +109,12 @@ class LogDataset(torch.utils.data.Dataset):
 
 
 def collate_fn(batch):
-    input_ids = pad_sequence([b["input_ids"] for b in batch], batch_first=True, padding_value=0)
-    attention_mask = pad_sequence([b["attention_mask"] for b in batch], batch_first=True, padding_value=0)
+    input_ids = pad_sequence(
+        [b["input_ids"] for b in batch], batch_first=True, padding_value=0
+    )
+    attention_mask = pad_sequence(
+        [b["attention_mask"] for b in batch], batch_first=True, padding_value=0
+    )
     labels = torch.stack([b["label"] for b in batch])
     return {"input_ids": input_ids, "attention_mask": attention_mask, "labels": labels}
 
@@ -164,7 +171,11 @@ def run_cross_validation(
     print(f"Device: {device}")
 
     # Load tokenizer and model ONCE (not per fold)
-    if use_local_category and LOCAL_CATEGORY_WEIGHTS.exists() and LOCAL_CATEGORY_TOKENIZER.exists():
+    if (
+        use_local_category
+        and LOCAL_CATEGORY_WEIGHTS.exists()
+        and LOCAL_CATEGORY_TOKENIZER.exists()
+    ):
         print("Loading category model from local files...")
         from tokenizers import Tokenizer
         from transformers import AutoConfig
@@ -175,24 +186,31 @@ def run_cross_validation(
         model = AutoModelForSequenceClassification.from_config(config)
         model.load_state_dict(load_file(str(LOCAL_CATEGORY_WEIGHTS)))
         model.to(device).eval()
-        
+
         # Get labels from config
         model_id2label = model.config.id2label
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_path,
-            trust_remote_code=True,
-            torch_dtype=torch.float32,
-        ).to(device).eval()
+        model = (
+            AutoModelForSequenceClassification.from_pretrained(
+                model_path,
+                trust_remote_code=True,
+                torch_dtype=torch.float32,
+            )
+            .to(device)
+            .eval()
+        )
         model_id2label = model.config.id2label
 
     # Verify model labels match dataset labels
     if isinstance(model_id2label, dict):
-        model_labels = [model_id2label.get(str(i), model_id2label.get(i, str(i))) for i in range(len(model_id2label))]
+        model_labels = [
+            model_id2label.get(str(i), model_id2label.get(i, str(i)))
+            for i in range(len(model_id2label))
+        ]
     else:
         model_labels = list(model_id2label) if model_id2label else labels
-    
+
     print(f"Model labels ({len(model_labels)}): {model_labels}")
     print(f"Dataset labels ({len(labels)}): {labels}")
 
@@ -202,8 +220,12 @@ def run_cross_validation(
         val_texts = [texts[i] for i in val_idx]
         val_labels = y[val_idx]
 
-        val_dataset = LogDataset(val_texts, val_labels, tokenizer, max_length, window_fn)
-        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+        val_dataset = LogDataset(
+            val_texts, val_labels, tokenizer, max_length, window_fn
+        )
+        val_loader = DataLoader(
+            val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn
+        )
 
         preds, trues = evaluate_fold(model, val_loader, device, id2label)
 
@@ -226,13 +248,23 @@ def run_cross_validation(
     print(f"\n{'='*60}")
     print("CROSS-VALIDATION RESULTS (Aggregated)")
     print(f"{'='*60}")
-    print(f"Mean Accuracy:  {np.mean(fold_accuracies):.4f} ± {np.std(fold_accuracies):.4f}")
-    print(f"Mean Macro-F1:  {np.mean(fold_macro_f1s):.4f} ± {np.std(fold_macro_f1s):.4f}")
+    print(
+        f"Mean Accuracy:  {np.mean(fold_accuracies):.4f} ± {np.std(fold_accuracies):.4f}"
+    )
+    print(
+        f"Mean Macro-F1:  {np.mean(fold_macro_f1s):.4f} ± {np.std(fold_macro_f1s):.4f}"
+    )
     print(f"\nOverall Accuracy: {accuracy_score(all_trues, all_preds):.4f}")
-    print(f"Overall Macro-F1: {f1_score(all_trues, all_preds, average='macro', zero_division=0):.4f}")
+    print(
+        f"Overall Macro-F1: {f1_score(all_trues, all_preds, average='macro', zero_division=0):.4f}"
+    )
 
     print("\nPer-Class Metrics:")
-    print(classification_report(all_trues, all_preds, target_names=labels, zero_division=0))
+    print(
+        classification_report(
+            all_trues, all_preds, target_names=labels, zero_division=0
+        )
+    )
 
     print("Confusion Matrix:")
     cm = confusion_matrix(all_trues, all_preds)
@@ -247,23 +279,43 @@ def run_cross_validation(
         "mean_macro_f1": float(np.mean(fold_macro_f1s)),
         "std_macro_f1": float(np.std(fold_macro_f1s)),
         "overall_accuracy": float(accuracy_score(all_trues, all_preds)),
-        "overall_macro_f1": float(f1_score(all_trues, all_preds, average="macro", zero_division=0)),
-        "classification_report": classification_report(all_trues, all_preds, target_names=labels, zero_division=0, output_dict=True),
+        "overall_macro_f1": float(
+            f1_score(all_trues, all_preds, average="macro", zero_division=0)
+        ),
+        "classification_report": classification_report(
+            all_trues, all_preds, target_names=labels, zero_division=0, output_dict=True
+        ),
         "confusion_matrix": cm.tolist(),
         "labels": labels,
     }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Cross-validation evaluation for CI log classifiers")
-    parser.add_argument("--model", choices=["category", "rootcause", "both"], default="both",
-                        help="Which model to evaluate")
-    parser.add_argument("--category-model", type=str, default=DEFAULT_CATEGORY_MODEL,
-                        help=f"Path to category model (default: {DEFAULT_CATEGORY_MODEL})")
-    parser.add_argument("--rootcause-model", type=str, default=DEFAULT_ROOTCAUSE_MODEL,
-                        help=f"Path to root-cause model (default: {DEFAULT_ROOTCAUSE_MODEL})")
+    parser = argparse.ArgumentParser(
+        description="Cross-validation evaluation for CI log classifiers"
+    )
+    parser.add_argument(
+        "--model",
+        choices=["category", "rootcause", "both"],
+        default="both",
+        help="Which model to evaluate",
+    )
+    parser.add_argument(
+        "--category-model",
+        type=str,
+        default=DEFAULT_CATEGORY_MODEL,
+        help=f"Path to category model (default: {DEFAULT_CATEGORY_MODEL})",
+    )
+    parser.add_argument(
+        "--rootcause-model",
+        type=str,
+        default=DEFAULT_ROOTCAUSE_MODEL,
+        help=f"Path to root-cause model (default: {DEFAULT_ROOTCAUSE_MODEL})",
+    )
     parser.add_argument("--folds", type=int, default=5, help="Number of CV folds")
-    parser.add_argument("--batch-size", type=int, default=16, help="Batch size for evaluation")
+    parser.add_argument(
+        "--batch-size", type=int, default=16, help="Batch size for evaluation"
+    )
     parser.add_argument("--output", type=str, help="Output JSON file for results")
     args = parser.parse_args()
 
@@ -275,8 +327,11 @@ def main():
         print(f"Categories: {df_cat['category'].nunique()} | Samples: {len(df_cat)}")
 
         # Use local files if model path matches default and local files exist
-        use_local = (args.category_model == DEFAULT_CATEGORY_MODEL and 
-                     LOCAL_CATEGORY_WEIGHTS.exists() and LOCAL_CATEGORY_TOKENIZER.exists())
+        use_local = (
+            args.category_model == DEFAULT_CATEGORY_MODEL
+            and LOCAL_CATEGORY_WEIGHTS.exists()
+            and LOCAL_CATEGORY_TOKENIZER.exists()
+        )
         if use_local:
             print("Using local model files (model.safetensors, tokenizer.json)")
 

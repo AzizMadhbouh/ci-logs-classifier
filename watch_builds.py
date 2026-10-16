@@ -12,6 +12,7 @@ For auto-start you can also register it as a logon scheduled task:
     schtasks /Create /TN "ci-build-ingest" /TR "python C:\\...\\watch_builds.py" \
             /SC ONLOGON /RL LIMITED
 """
+
 import argparse
 import time
 
@@ -45,7 +46,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--interval", type=int, default=DEFAULT_INTERVAL)
-    ap.add_argument("--reconcile", type=int, default=5, help="re-ingest the last N builds every poll")
+    ap.add_argument(
+        "--reconcile",
+        type=int,
+        default=5,
+        help="re-ingest the last N builds every poll",
+    )
     args = ap.parse_args()
 
     print(f"Watching Jenkins for new builds (poll every {args.interval}s)...")
@@ -55,7 +61,9 @@ def main():
             if db_max == 0:
                 print(f"DB empty, caught up after ingesting {ingested} build(s).")
             elif ingested:
-                print(f"caught up: {ingested} build(s) verified (now tracking {len(builds)}).")
+                print(
+                    f"caught up: {ingested} build(s) verified (now tracking {len(builds)})."
+                )
             if args.once:
                 print(f"latest DB build: {db_max} | jenkins builds: {len(builds)}")
                 return
