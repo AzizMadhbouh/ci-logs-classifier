@@ -368,4 +368,6 @@ GitHub Actions (`.github/workflows/ci.yml`) runs four jobs:
 
 ## License
 
-No license file yet. Add one (e.g. MIT) before reuse by others.
+Released under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Mohamed Aziz Madhbouh.
